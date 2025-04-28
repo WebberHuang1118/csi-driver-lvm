@@ -523,7 +523,8 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 }
 
 func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	klog.Infof("ControllerExpandVolume called with request: %+v", req)
+	return nil, status.Error(codes.Unimplemented, "ControllerExpandVolume is not supported")
 }
 
 func (cs *controllerServer) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
