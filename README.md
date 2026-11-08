@@ -23,6 +23,13 @@ creates a `<vg-name>-thinpool` thin pool using 90% of the free extents, a 512
 KiB chunk size, 16 GiB of metadata, and an enabled volume-group metadata spare.
 Existing thin pools are used as-is and are not modified by the driver.
 
+Deleting a volume removes only that logical volume. The shared thin pool is
+retained even when empty, so deletion cannot remove a pool that a concurrent
+provisioning operation is using. Its data and metadata extents remain allocated
+to the pool for reuse; deleting the last volume does not return those extents
+to the VG. Pool removal requires separate administrative coordination with
+provisioning and confirmation that no volumes or snapshots depend on it.
+
 Controller-side LVM work runs in short-lived helper pods. The chart limits
 active helpers per node and volume group, including helpers retained after a
 timed-out CSI request. Ordinary operations use a `3m` command timeout and a

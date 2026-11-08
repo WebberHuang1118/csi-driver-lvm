@@ -56,12 +56,9 @@ func deleteLV(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to delete lv: %w output:%s", err, output)
 	}
-	if vgType == lvm.DmThinType {
-		err := lvm.RemoveThinPool(vgName)
-		if err != nil {
-			return fmt.Errorf("unable to delete thinpool: %w output:%s", err, output)
-		}
-	}
+	// The thin pool is shared with other volumes and concurrent helpers. Even
+	// an empty pool can acquire a new volume between an lvs check and lvremove,
+	// so volume deletion must leave the pool in place for reuse.
 	klog.Infof("lv %s is deleted", lvName)
 	return nil
 }

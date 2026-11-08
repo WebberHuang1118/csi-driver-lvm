@@ -1134,28 +1134,6 @@ func CloneDevice(src, dst *os.File) error {
 	return ioutil.Copy(src, dst, DefaultChunkSize)
 }
 
-func RemoveThinPool(vgName string) error {
-	// if the vg is not empty, we should skip this steps
-	targetThinPool := fmt.Sprintf("%s-thinpool", vgName)
-	thinPoolInfo, err := getThinPoolAndCounts(vgName)
-	if err != nil {
-		return fmt.Errorf("unable to get thinpool and count: %w", err)
-	}
-	if _, ok := thinPoolInfo[targetThinPool]; !ok {
-		klog.Infof("thinpool %s does not exist, skip remove!", targetThinPool)
-		return nil
-	}
-	if thinPoolInfo[targetThinPool] > 0 {
-		klog.Infof("thinpool %s is not empty, skip remove!", targetThinPool)
-		return nil
-	}
-	_, err = RemoveLVSInVG(vgName, targetThinPool)
-	if err != nil {
-		return fmt.Errorf("unable to remove thinpool: %w", err)
-	}
-	return nil
-}
-
 func pvCount(vgname string) (int, error) {
 	executor := newCommandExecutor()
 	out, err := executor.Execute("vgs", []string{vgname, "--noheadings", "-o", "pv_count"})
@@ -1168,46 +1146,6 @@ func pvCount(vgname string) (int, error) {
 		return 0, err
 	}
 	return count, nil
-}
-
-func getThinPoolAndCounts(vgName string) (map[string]int, error) {
-	executor := newCommandExecutor()
-	// we would like to get the segtype, name as below:
-	// vg02 thin thinvol01    <-- this is volume
-	// vg02 thin-pool vg02-thinpool 1  <-- this is thin-pool
-	// Query all VGs so an already removed VG produces an empty result rather
-	// than turning an idempotent delete into an error.
-	args := []string{"--noheadings", "-o", "vg_name,segtype,name,thin_count"}
-	out, err := executor.Execute("lvs", args)
-	if err != nil {
-		klog.Infof("execute lvs %s, err: %v", args, err)
-		return nil, err
-	}
-	lines := strings.Split(out, "\n")
-	// type[Name]
-	// type: thin -> vol name
-	//       thin-pool -> pool name -> thin_count
-	thinInfo := make(map[string]int)
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Fields(line)
-		if len(parts) != 4 {
-			klog.Infof("Skip thin info: %s", line)
-			continue
-		}
-		// confirm again, we only care about thin-pool
-		// thinInfo: map[<thin pool>]:<thin count>
-		if parts[0] == vgName && parts[1] == ThinPoolType {
-			count, err := strconv.Atoi(parts[3])
-			if err != nil {
-				return nil, err
-			}
-			thinInfo[parts[2]] = count
-		}
-	}
-	return thinInfo, nil
 }
 
 func validateThinPool(vgName, thinpoolName string) error {

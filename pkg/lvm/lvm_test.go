@@ -912,40 +912,6 @@ func TestSnapshotBackendOperationsAreIdempotent(t *testing.T) {
 	})
 }
 
-func TestRemoveThinPoolIsIdempotentWhenVGIsAbsent(t *testing.T) {
-	fake := &fakeCommandExecutor{
-		t:       t,
-		results: []commandResult{{command: "lvs", output: ""}},
-	}
-	useFakeCommandExecutor(t, fake)
-
-	if err := RemoveThinPool("missing-vg"); err != nil {
-		t.Fatalf("missing VG should be treated as an already absent thin pool: %v", err)
-	}
-}
-
-func TestGetThinPoolAndCountsFiltersVolumeGroup(t *testing.T) {
-	fake := &fakeCommandExecutor{
-		t: t,
-		results: []commandResult{{
-			command: "lvs",
-			output: "vg-a thin volume-a\n" +
-				"vg-a thin-pool vg-a-thinpool 2\n" +
-				"vg-b thin-pool vg-b-thinpool 1\n",
-		}},
-	}
-	useFakeCommandExecutor(t, fake)
-
-	got, err := getThinPoolAndCounts("vg-a")
-	if err != nil {
-		t.Fatalf("getThinPoolAndCounts failed: %v", err)
-	}
-	want := map[string]int{"vg-a-thinpool": 2}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("unexpected thin pool counts: want %#v, got %#v", want, got)
-	}
-}
-
 func TestGetFilesystemTypeRejectsAmbiguousWipefsOutput(t *testing.T) {
 	fake := &fakeCommandExecutor{
 		t: t,
